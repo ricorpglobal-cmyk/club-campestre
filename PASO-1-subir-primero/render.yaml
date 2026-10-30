@@ -1,0 +1,47 @@
+# Despliegue en un clic en Render (Blueprint).
+# Render crea: el servidor web, la base PostgreSQL con respaldos diarios y un disco privado para documentos.
+# Al crear el Blueprint, Render sólo le pedirá los datos del primer administrador.
+databases:
+  - name: club-campestre-db
+    plan: basic-256mb
+    region: ohio
+    postgresMajorVersion: "16"
+    databaseName: club_campestre
+    user: club_campestre
+
+services:
+  - type: web
+    name: club-campestre
+    runtime: node
+    region: ohio
+    plan: starter
+    buildCommand: npm ci && npm run build
+    startCommand: npm run start:prod
+    healthCheckPath: /login
+    disk:
+      name: documentos
+      mountPath: /var/data
+      sizeGB: 1
+    envVars:
+      - key: NODE_VERSION
+        value: "22"
+      - key: DATABASE_URL
+        fromDatabase:
+          name: club-campestre-db
+          property: connectionString
+      - key: SESSION_SECRET
+        generateValue: true
+      - key: STORAGE_DRIVER
+        value: local
+      - key: STORAGE_LOCAL_DIR
+        value: /var/data/storage
+      # Datos del primer administrador (sólo se usan si todavía no existe ningún usuario).
+      # La contraseña que capture aquí es TEMPORAL: el sistema obliga a cambiarla en el primer acceso.
+      - key: ADMIN_USERNAME
+        sync: false
+      - key: ADMIN_FULL_NAME
+        sync: false
+      - key: ADMIN_EMAIL
+        sync: false
+      - key: ADMIN_PASSWORD
+        sync: false
